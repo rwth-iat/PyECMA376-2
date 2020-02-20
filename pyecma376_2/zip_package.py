@@ -3,11 +3,11 @@ from typing import Iterable, BinaryIO, IO
 
 from . import package_model
 
-CONTENT_TYPES_STREAM_NAME = "/[ContentTypes.xml]"
+CONTENT_TYPES_STREAM_NAME = "/[Content_Types].xml"
 
 
 class ZipPackageReader(package_model.OPCPackageReader, zipfile.ZipFile):
-    content_types_stream_name = CONTENT_TYPES_STREAM_NAME
+    content_types_stream_name = package_model.normalize_part_name(CONTENT_TYPES_STREAM_NAME)
 
     def __init__(self, file):
         package_model.OPCPackageReader.__init__(self)
