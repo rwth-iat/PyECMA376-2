@@ -2,18 +2,29 @@ import abc
 import enum
 import io
 import re
-from typing import BinaryIO, Sequence, Dict, Iterable, NamedTuple, Optional, IO
+import urllib.parse
+import xml.etree.ElementTree as ETree
+from typing import BinaryIO, Sequence, Dict, Iterable, NamedTuple, Optional, IO, Generator
 
 RE_RELS_PARTS = re.compile(r'^(.*/)_rels/([^/]*).rels$', re.IGNORECASE)
 RE_FRAGMENT_ITEMS = re.compile(r'^(.*)/\[(\d+)\](.last)?.piece$', re.IGNORECASE)
+RELATIONSHIPS_XML_NAMESPACE = "http://schemas.openxmlformats.org/package/2006/relationships"
 
 
 class OPCPackageReader(metaclass=abc.ABCMeta):
     content_types_stream_name: Optional[str] = None
 
     def __init__(self):
+        # TODO provide single mechanism for getting content types (including physical mappings with native content type)
         if self.content_types_stream_name is not None:
-            self.content_types = ContentTypesData()  # TODO should be initialized by inheriting class after opening data
+            self.content_types = ContentTypesData()
+
+    def _init_data(self):
+        """ Part of the initializer which should be called after opening the package """
+        # TODO initialize dict of part names
+        if self.content_types_stream_name is not None:
+            with self.open_part(self.content_types_stream_name) as part:
+                self.content_types = ContentTypesData.from_xml(part)
 
     def list_parts(self, include_rels_parts=False) -> Iterable[str]:
         for item_name in self.list_items():
@@ -32,7 +43,7 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
             yield part_name
 
     def open_part(self, name: str) -> IO[bytes]:
-        # TODO handle fragmented parts
+        # TODO create dict of normalized part names and parts in the package to lookup correct spelling
         try:
             return self.open_item(name)
         except KeyError:
@@ -41,10 +52,10 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
             except KeyError as e:
                 raise KeyError("Could not find part {} in package".format(name))
 
-    def get_relationships(self) -> Sequence["OPCRelationship"]:
+    def get_relationships(self) -> Generator["OPCRelationship"]:
         return self._read_relationships(self.open_part("/_rels/.rels"))
 
-    def get_part_relationships(self, part_name: str) -> Sequence["OPCRelationship"]:
+    def get_part_relationships(self, part_name: str) -> Generator["OPCRelationship", None, None]:
         return self._read_relationships(self.open_part(_rels_part_for(part_name)))
 
     def close(self) -> None:
@@ -57,9 +68,14 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
         self.close()
 
     @staticmethod
-    def _read_relationships(rels_part: IO[bytes]) -> Sequence["OPCRelationship"]:
-        # TODO
-        pass
+    def _read_relationships(rels_part: IO[bytes]) -> Generator["OPCRelationship", None, None]:
+        for _event, elem in ETree.iterparse(rels_part):
+            if elem.tag == "Relationship":
+                yield OPCRelationship(
+                    elem.attrib["Id"],
+                    elem.attrib["Type"],
+                    elem.attrib["Target"],
+                    OPCTargetMode.from_serialization(elem.attrib.get('TargetMode', 'Internal')))
 
     @abc.abstractmethod
     def list_items(self) -> Iterable[str]:
@@ -116,6 +132,8 @@ class OPCPackageWriter(metaclass=abc.ABCMeta):
             self._write_relationships(i, relationships)
 
     def open_part(self, name: str, content_type: str) -> IO[bytes]:
+        part_name = normalize_part_name(name)
+        check_part_name(part_name)
         if self.content_types_stream_name is not None:
             if self.content_types.get_content_type(name) != content_type:
                 if self.content_types_written:
@@ -126,10 +144,14 @@ class OPCPackageWriter(metaclass=abc.ABCMeta):
         return self.create_item(name, content_type)
 
     def write_part_relationships(self, part_name: str, relationships: Iterable["OPCRelationship"]) -> None:
+        part_name = normalize_part_name(part_name)
+        check_part_name(part_name)
         with self.open_part(_rels_part_for(part_name), "application/xml") as i:
             self._write_relationships(i, relationships)
 
     def create_fragmented_part(self, name: str, content_type: str) -> "FragmentedPartWriterHandle":
+        part_name = normalize_part_name(name)
+        check_part_name(part_name)
         if self.content_types_stream_name is not None:
             if self.content_types.get_content_type(name) != content_type:
                 if self.content_types_written:
@@ -163,9 +185,15 @@ class OPCPackageWriter(metaclass=abc.ABCMeta):
         pass
 
     @staticmethod
-    def _write_relationships(rels_part: IO[bytes], relationships: Iterable["OPCRelationship"]):
-        # TODO
-        pass
+    def _write_relationships(rels_part: IO[bytes], relationships: Iterable["OPCRelationship"]) -> None:
+        root = ETree.Element("Relationships")
+        for relationship in relationships:
+            ETree.SubElement(root, 'Relationship', {
+                'Target': relationship.target,
+                'Id': relationship.id,
+                'Type': relationship.type,
+                'TargetMode': relationship.target_mode.serialize()})
+        ETree.ElementTree(root).write(rels_part, default_namespace=RELATIONSHIPS_XML_NAMESPACE)
 
 
 class FragmentedPartWriterHandle:
@@ -190,6 +218,13 @@ class OPCTargetMode(enum.Enum):
     INTERNAL = 1
     EXTERNAL = 2
 
+    @classmethod
+    def from_serialization(cls, serialization: str) -> "OPCTargetMode":
+        return cls[serialization.upper()]
+
+    def serialize(self) -> str:
+        return self.name.capitalize()
+
 
 class OPCRelationship(NamedTuple):
     id: str
@@ -199,6 +234,8 @@ class OPCRelationship(NamedTuple):
 
 
 class ContentTypesData:
+    XML_NAMESPACE = "http://schemas.openxmlformats.org/package/2006/content-types"
+
     def __init__(self):
         self.default_types: Dict[str, str] = {}   # dict mapping file extensions to mime types
         self.overrides: Dict[str, str] = {}   # dict mapping part names to mime types
@@ -213,13 +250,22 @@ class ContentTypesData:
         return None
 
     @classmethod
-    def from_xml(cls, content_types_file: BinaryIO) -> "ContentTypesData":
-        # TODO
-        pass
+    def from_xml(cls, content_types_file: IO[bytes]) -> "ContentTypesData":
+        result = cls()
+        for _event, elem in ETree.iterparse(content_types_file):
+            if elem.tag == "Default":
+                result.default_types[elem.attrib["Extension"].lower()] = elem.attrib["ContentType"]
+            elif elem.tag == "Override":
+                result.default_types[normalize_part_name(elem.attrib["PartName"])] = elem.attrib["ContentType"]
+        return result
 
     def write_xml(self, file: IO[bytes]) -> None:
-        # TODO
-        pass
+        root = ETree.Element("Types")
+        for extension, content_type in self.default_types:
+            ETree.SubElement(root, 'Default', {'Extension': extension, 'ContentType': content_type})
+        for part_name, content_type in self.overrides:
+            ETree.SubElement(root, 'Override', {'PartName': part_name, 'ContentType': content_type})
+        ETree.ElementTree(root).write(file, default_namespace=self.XML_NAMESPACE)
 
 
 def _rels_part_for(part_name: str) -> str:
@@ -228,5 +274,18 @@ def _rels_part_for(part_name: str) -> str:
 
 
 def normalize_part_name(part_name: str) -> str:
-    # TODO IRI → URI conversion
+    """ Converts a part name to the normalized URI representation (i.e. uschars are %-encoded) and to lowercase """
+    part_name = urllib.parse.quote(part_name, safe='/#%[]=:;$&()+,!?*@\'~')
     return part_name.lower()
+
+
+RE_PART_NAME = re.compile(r'^(/[A-Za-z0-9\-\._~%:@!$&\'()*+,;=]*[A-Za-z0-9\-_~%:@!$&\'()*+,;=])+$')
+RE_PART_NAME_FORBIDDEN = re.compile(r'%5c|%2f', re.IGNORECASE)
+
+
+def check_part_name(part_name: str) -> None:
+    if not RE_PART_NAME.match(part_name):
+        raise ValueError("{} is not an URI path with multiple segments (each not empty and not starting with '.') "
+                         "or not starting with '/' or ending wit '/'".format(repr(part_name)))
+    if RE_PART_NAME_FORBIDDEN.match(part_name):
+        raise ValueError("{} contains URI encoded '/' or '\\'.".format(repr(part_name)))
