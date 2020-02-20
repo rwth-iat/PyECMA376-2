@@ -12,10 +12,7 @@ class ZipPackageReader(package_model.OPCPackageReader, zipfile.ZipFile):
     def __init__(self, file):
         package_model.OPCPackageReader.__init__(self)
         zipfile.ZipFile.__init__(self, file)
-
-        # Read content types data
-        with self.open_part(""):
-            self.content_types = package_model.ContentTypesData.from_xml()
+        self._init_data()
 
     def list_items(self) -> Iterable[str]:
         return ["/" + name for name in self.namelist()]
