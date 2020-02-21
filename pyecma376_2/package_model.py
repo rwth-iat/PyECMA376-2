@@ -106,10 +106,29 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def list_items(self) -> Iterable[str]:
+        """
+        List the (logical) names of all items in the underlying physical package.
+
+        This function must be overridden by concrete physical mappings of the pacakge model. It must implement the
+        mapping of physical item names to logical item names. It must *not* convert item names to part names nor
+        normalize the names. It shall not filter the list of item names.
+        """
         pass
 
     @abc.abstractmethod
     def open_item(self, name: str) -> IO[bytes]:
+        """
+        Open an item of the underlying physical package by logical item name.
+
+        This function must be overridden by concrete physical mappings of the pacakge model. It must implement the
+        mapping of logical item names to physical item names and access to the physical bytestream. It does *not* need
+        to implement normaliziation of logical item names.
+
+        :param name: The logical item name as it is present in the physical package (e.g. "/[Content_Types].xml",
+            "/some/document.xml/[1].piece").
+        :return: A readable file-like object for the item
+        :raises KeyError: If no such item exists in the physical package
+        """
         pass
 
 
@@ -248,6 +267,7 @@ class FragmentedPartWriterHandle:
 
 
 class OPCTargetMode(enum.Enum):
+    """ Enum representation of the TargetMode attribute of an OPCRelationship. """
     INTERNAL = 1
     EXTERNAL = 2
 
@@ -260,6 +280,18 @@ class OPCTargetMode(enum.Enum):
 
 
 class OPCRelationship(NamedTuple):
+    """
+    Tuple representation of a Relationship within an OPC package. From the OPC specs:
+
+    * The Id type is xsd:ID and it shall conform to the naming restrictions for xsd:ID as specified in the W3C
+      Recommendation “XML Schema Part 2: Datatypes.” The value of the Id attribute shall be unique within the
+      Relationships part.
+    * The package implementer shall require the Type attribute to be a URI that defines the role of the relationship and
+      the format designer shall specify such a Type.
+    * The package implementer shall require the Target attribute to be a URI reference pointing to a target resource.
+      The URI reference shall be a URI or a relative reference.
+    * The TargetMode indicates whether or not the target describes a resource inside the package or outside the package.
+    """
     id: str
     type: str
     target: str
@@ -267,6 +299,9 @@ class OPCRelationship(NamedTuple):
 
 
 class ContentTypesData:
+    """
+    Class to represent the "ContentTypesStream" used to represent the Content Types of OPC packages without native
+    content types."""
     XML_NAMESPACE = "{http://schemas.openxmlformats.org/package/2006/content-types}"
 
     def __init__(self):
@@ -274,6 +309,13 @@ class ContentTypesData:
         self.overrides: Dict[str, str] = {}   # dict mapping part names to mime types
 
     def get_content_type(self, part_name: str) -> Optional[str]:
+        """
+        Get the Content Type of the part with the given name, according to this ContentTypesStream data.
+
+        :param part_name: An (absolute) part name
+        :return: The content type of the part, or None if it has not been defined (neither by a Default nor by an
+            Override)
+        """
         part_name = normalize_part_name(part_name)
         if part_name in self.overrides:
             return self.overrides[part_name]
@@ -305,6 +347,7 @@ class ContentTypesData:
 
 
 def _rels_part_for(part_name: str) -> str:
+    """ Get the name of the XML part with the relationships of `part_name` according to the OPC spec """
     name_parts = part_name.split("/")
     return "/".join(name_parts[:-1] + ["_rels", name_parts[-1]]) + ".rels"
 
@@ -320,6 +363,10 @@ RE_PART_NAME_FORBIDDEN = re.compile(r'%5c|%2f', re.IGNORECASE)
 
 
 def check_part_name(part_name: str) -> None:
+    """ Check if `part_name` is a valid OPC part name in URI (not IRI) representation.
+
+    :raises ValueError: if it is not.
+    """
     if not RE_PART_NAME.match(part_name):
         raise ValueError("{} is not an URI path with multiple segments (each not empty and not starting with '.') "
                          "or not starting with '/' or ending wit '/'".format(repr(part_name)))
@@ -328,7 +375,12 @@ def check_part_name(part_name: str) -> None:
 
 
 def part_realpath(part_name: str, source_part_name: str) -> str:
-    """ Get an absolute part name from a relative part name (e.g. from a relationship) """
+    """ Get an absolute part name from a relative part name (e.g. from a relationship)
+
+    @:param part_name: A relative or absolute part name to be transformed
+    @:param source_part_name: Base part (source of the relationship etc.) to use as starting point of part_name if it
+        is a relative path
+    """
     if part_name[0] == "/":
         return part_name
     path_segments = part_name.split("/")
