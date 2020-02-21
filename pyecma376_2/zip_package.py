@@ -15,7 +15,8 @@ class ZipPackageReader(package_model.OPCPackageReader, zipfile.ZipFile):
         self._init_data()
 
     def list_items(self) -> Iterable[str]:
-        return ["/" + name for name in self.namelist()]
+        return ["/" + name for name in self.namelist()
+                if name[-1] != '/']
 
     def open_item(self, name: str) -> IO[bytes]:
         return self.open(name[1:])

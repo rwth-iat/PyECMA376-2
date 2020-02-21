@@ -33,7 +33,7 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
         for item_name in self.list_items():
             fragment_match = RE_FRAGMENT_ITEMS.match(item_name)
             if fragment_match:
-                if fragment_match[2] != 0:
+                if fragment_match[2] != "0":
                     continue
                 part_name = fragment_match[1]
                 self._parts[normalize_part_name(part_name)] = self._PartDescriptor(content_type="", fragmented=True,
@@ -119,26 +119,32 @@ class FragmentedPartReader(io.RawIOBase):
         self._reader: OPCPackageReader = reader
         self._fragment_number: int = 0
         self._finished = False
-        self._current_item_handle: IO[bytes] = self._open_next_item()
+        self._current_item_handle: IO[bytes]
+        self._open_next_item()
 
-    def _open_next_item(self) -> IO[bytes]:
+    def _open_next_item(self) -> None:
         try:
-            return self._reader.open_item("{}/[{}].piece".format(self._name, self._fragment_number))
+            self. _current_item_handle = self._reader.open_item("{}/[{}].piece"
+                                                                .format(self._name, self._fragment_number))
+            self._fragment_number += 1
         except KeyError:
-            self.finished = True
+            self._finished = True
             try:
-                return self._reader.open_item("{}/[{}].last.piece".format(self._name, self._fragment_number))
+                self._current_item_handle = self._reader.open_item("{}/[{}].last.piece"
+                                                                   .format(self._name, self._fragment_number))
+                self._fragment_number += 1
             except KeyError as e:
-                raise KeyError("Fragment {} of part {} is missing in package".format(self._fragment_number, self._name))
+                raise KeyError("Fragment {} of part {} is missing in package"
+                               .format(self._fragment_number, self._name)) from e
 
     def seekable(self) -> bool:
         return False
 
     def read(self, size: int = -1) -> Optional[bytes]:
         result = self._current_item_handle.read(size)
-        while result is not None and (size == -1 or 0 == len(result) < size) and not self.finished:
+        while result is not None and (size == -1 or 0 == len(result) < size) and not self._finished:
             self._current_item_handle.close()
-            self._current_item_handle = self._open_next_item()
+            self._open_next_item()
             result += self._current_item_handle.read(size)
         return result
 
