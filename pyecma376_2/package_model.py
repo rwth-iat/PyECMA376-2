@@ -26,6 +26,8 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
     def __init__(self):
         # dict mapping all known normalized part names to (content type, fragmented, physical item name)
         self._parts: Dict[str, OPCPackageReader._PartDescriptor] = {}
+        # A cache for the get_related_parts_by_type() method
+        self._related_parts_cache: Dict[str, Dict[str, List[str]]] = {}
 
     def _init_data(self) -> None:
         """ Part of the initializer which should be called after opening the package """
@@ -78,12 +80,16 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
         yield from self._read_relationships(rels_part)
 
     def get_related_parts_by_type(self, part_name: str = "/") -> Dict[str, List[str]]:
-        # TODO add caching
+        part_name = normalize_part_name(part_name)
+        if part_name in self._related_parts_cache:
+            return self._related_parts_cache[part_name]
         result = collections.defaultdict(list)  # type: DefaultDict[str, List[str]]
         for relationship in self.get_raw_relationships(part_name):
             if relationship.target_mode == OPCTargetMode.INTERNAL:
                 result[relationship.type].append(normalize_part_name(part_realpath(relationship.target, part_name)))
-        return dict(result)
+        freezed_result = dict(result)
+        self._related_parts_cache[part_name] = freezed_result
+        return freezed_result
 
     def close(self) -> None:
         pass
