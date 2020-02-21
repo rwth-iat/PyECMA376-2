@@ -329,10 +329,12 @@ def check_part_name(part_name: str) -> None:
 
 def part_realpath(part_name: str, source_part_name: str) -> str:
     """ Get an absolute part name from a relative part name (e.g. from a relationship) """
+    if part_name[0] == "/":
+        return part_name
     path_segments = part_name.split("/")
     result = source_part_name.split("/")[:-1]
     for segment in path_segments:
-        if segment == '.':
+        if segment in ('.', ''):
             pass
         elif segment == '..':
             result.pop()
