@@ -7,7 +7,7 @@ import types
 import urllib.parse
 # We need lxml's ElementTree implementation, as it allows correct handling of default namespaces (xmlns="…") when
 # writing XML files. And since we already have it, we also use the iterative writer.
-import lxml.etree as ETree
+import lxml.etree as etree  # type: ignore
 from typing import BinaryIO, Sequence, Dict, Iterable, NamedTuple, Optional, IO, Generator, List, DefaultDict, Tuple
 
 RE_RELS_PARTS = re.compile(r'^(.*/)_rels/([^/]*).rels$', re.IGNORECASE)
@@ -96,7 +96,7 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
 
     @staticmethod
     def _read_relationships(rels_part: IO[bytes]) -> Generator["OPCRelationship", None, None]:
-        for _event, elem in ETree.iterparse(rels_part):
+        for _event, elem in etree.iterparse(rels_part):
             if elem.tag == RELATIONSHIPS_XML_NAMESPACE + "Relationship":
                 yield OPCRelationship(
                     elem.attrib["Id"],
@@ -218,11 +218,11 @@ class OPCPackageWriter(metaclass=abc.ABCMeta):
 
     @staticmethod
     def _write_relationships(rels_part: IO[bytes], relationships: Iterable["OPCRelationship"]) -> None:
-        with ETree.xmlfile(rels_part, encoding="UTF-8") as xf:
+        with etree.xmlfile(rels_part, encoding="UTF-8") as xf:
             with xf.element(RELATIONSHIPS_XML_NAMESPACE + "Relationships",
                             nsmap={None: RELATIONSHIPS_XML_NAMESPACE[1:-1]}):
                 for relationship in relationships:
-                    xf.write(ETree.Element(RELATIONSHIPS_XML_NAMESPACE + 'Relationship', {
+                    xf.write(etree.Element(RELATIONSHIPS_XML_NAMESPACE + 'Relationship', {
                         'Target': relationship.target,
                         'Id': relationship.id,
                         'Type': relationship.type,
@@ -285,7 +285,7 @@ class ContentTypesData:
     @classmethod
     def from_xml(cls, content_types_file: IO[bytes]) -> "ContentTypesData":
         result = cls()
-        for _event, elem in ETree.iterparse(content_types_file):
+        for _event, elem in etree.iterparse(content_types_file):
             if elem.tag == cls.XML_NAMESPACE + "Default":
                 result.default_types[elem.attrib["Extension"].lower()] = elem.attrib["ContentType"]
             elif elem.tag == cls.XML_NAMESPACE + "Override":
@@ -293,14 +293,14 @@ class ContentTypesData:
         return result
 
     def write_xml(self, file: IO[bytes]) -> None:
-        with ETree.xmlfile(file, encoding="UTF-8") as xf:
+        with etree.xmlfile(file, encoding="UTF-8") as xf:
             with xf.element(self.XML_NAMESPACE + "Types",
                             nsmap={None: self.XML_NAMESPACE[1:-1]}):
                 for extension, content_type in self.default_types.items():
-                    xf.write(ETree.Element(self.XML_NAMESPACE + 'Default',
+                    xf.write(etree.Element(self.XML_NAMESPACE + 'Default',
                                            {'Extension': extension, 'ContentType': content_type}))
                 for part_name, content_type in self.overrides.items():
-                    xf.write(ETree.Element(self.XML_NAMESPACE + 'Override',
+                    xf.write(etree.Element(self.XML_NAMESPACE + 'Override',
                                            {'PartName': part_name, 'ContentType': content_type}))
 
 

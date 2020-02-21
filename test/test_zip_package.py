@@ -1,8 +1,8 @@
 import os.path
 import unittest
 
-import lxml.etree as ETree
-from pyecma376_2 import zip_package, package_model
+import lxml.etree as etree  # type: ignore
+from pyecma376_2 import zip_package
 
 
 class TestZipReader(unittest.TestCase):
@@ -14,8 +14,8 @@ class TestZipReader(unittest.TestCase):
         self.assertGreater(len(parts), 0)
         package_rels = list(reader.get_raw_relationships())
         self.assertGreater(len(package_rels), 0)
-        document_part = reader.get_related_parts_by_type()\
-            ['http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument'][0]
+        document_part = reader.get_related_parts_by_type()[
+            'http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument'][0]
         self.assertEqual("/word/document.xml", document_part)
         document_rels = list(reader.get_raw_relationships("/word/document.xml"))
         self.assertGreater(len(document_rels), 0)
@@ -28,7 +28,7 @@ class TestZipReader(unittest.TestCase):
 
         self.assertIn("/word/document.xml", (n for n, ct in reader.list_parts()))
         with reader.open_part("/word/document.xml") as doc:
-            ETree.parse(doc)
+            etree.parse(doc)
 
         reader.close()
 
