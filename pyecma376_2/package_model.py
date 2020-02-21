@@ -50,10 +50,9 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
                 if part_name == self.content_types_stream_name:
                     continue
                 content_type = content_types.get_content_type(part_name)
-                if content_type is None:
-                    raise ValueError("No content type for part {} given".format(part_name))
-                    # TODO add failsafe variant?
-                part_record.content_type = content_type
+                # TODO log warning if no content_type given
+                if content_type is not None:
+                    part_record.content_type = content_type
             del self._parts[self.content_types_stream_name]
 
     def list_parts(self, include_rels_parts=False) -> Iterable[Tuple[str, str]]:
@@ -79,6 +78,7 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
         yield from self._read_relationships(rels_part)
 
     def get_related_parts_by_type(self, part_name: str = "/") -> Dict[str, List[str]]:
+        # TODO add caching
         result = collections.defaultdict(list)  # type: DefaultDict[str, List[str]]
         for relationship in self.get_raw_relationships(part_name):
             if relationship.target_mode == OPCTargetMode.INTERNAL:
