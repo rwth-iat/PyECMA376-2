@@ -32,6 +32,8 @@ class TestZipReader(unittest.TestCase):
 
         reader.close()
 
+
+class TestZipWriter(unittest.TestCase):
     def test_rewrite_docx(self):
         file_name = os.path.join(os.path.dirname(__file__), "empty_document.docx")
         file_name_new = os.path.join(os.path.dirname(__file__), "empty_document_new.docx")
