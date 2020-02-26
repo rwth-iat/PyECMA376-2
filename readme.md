@@ -33,6 +33,14 @@ Modifying packages in-place is **not** supported.
 * reading/verifying/creating cryptographic signatures
 
 
+### Dependencies
+
+This package requires `lxml` for XML reading and writing (with proper XML namespaces support).
+Apart from that only the Python standard library is required.
+
+The Python interpreter must support Python 3.6 or higher.
+
+
 ## Usage
 
 Short example of reading an OPC package file:
