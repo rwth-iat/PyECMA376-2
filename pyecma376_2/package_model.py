@@ -73,6 +73,9 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
                 for normalized_name, part_descriptor in self._parts.items()
                 if include_rels_parts or not RE_RELS_PARTS.match(normalized_name))
 
+    def get_content_type(self, part_name: str) -> str:
+        return self._parts[normalize_part_name(part_name)].content_type
+
     def open_part(self, name: str) -> IO[bytes]:
         try:
             part_descriptor = self._parts[normalize_part_name(name)]
