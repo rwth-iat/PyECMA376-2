@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Core Properties Example from ECMA-376, 4 th Edition, page 43. -->
+<coreProperties
+        xmlns="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
+        xmlns:dcterms="http://purl.org/dc/terms/"
+        xmlns:dc="http://purl.org/dc/elements/1.1/"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <dc:creator>Alan Shen</dc:creator>
+    <dcterms:created xsi:type="dcterms:W3CDTF">2005-06-12</dcterms:created>
+    <dc:title>OPC Core Properties</dc:title>
+    <dc:subject>Spec defines the schema for OPC Core Properties and their location within the package</dc:subject>
+    <dc:language>eng</dc:language>
+    <version>1.0</version>
+    <lastModifiedBy>Alan Shen</lastModifiedBy>
+    <dcterms:modified xsi:type="dcterms:W3CDTF">2005-11-23</dcterms:modified>
+    <contentStatus>Reviewed</contentStatus>
+    <category>Specification</category>
+</coreProperties>

@@ -11,3 +11,4 @@
 
 from .package_model import OPCRelationship, OPCTargetMode
 from .zip_package import ZipPackageReader, ZipPackageWriter
+from .core_properties import OPCCoreProperties
