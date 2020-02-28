@@ -19,7 +19,7 @@ setuptools.setup(
     version="0.1.0",
     author="Michael Thies",
     author_email="mail@mhthies.de",
-    description="Library for reading and writing ECMA 376-2 (Open Packaging Specification) files",
+    description="Library for reading and writing ECMA 376-2 (Open Packaging Conventions) files",
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=["pyecma376_2"],
