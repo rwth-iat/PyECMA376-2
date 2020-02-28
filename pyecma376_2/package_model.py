@@ -217,6 +217,8 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
                     elem.attrib["Type"],
                     elem.attrib["Target"],
                     OPCTargetMode.from_serialization(elem.attrib.get('TargetMode', 'Internal')))
+                elem.clear()
+
 
     @abc.abstractmethod
     def list_items(self) -> Iterable[str]:
@@ -461,8 +463,10 @@ class ContentTypesData:
         for _event, elem in etree.iterparse(content_types_file):
             if elem.tag == cls.XML_NAMESPACE + "Default":
                 result.default_types[elem.attrib["Extension"].lower()] = elem.attrib["ContentType"]
+                elem.clear()
             elif elem.tag == cls.XML_NAMESPACE + "Override":
                 result.overrides[normalize_part_name(elem.attrib["PartName"])] = elem.attrib["ContentType"]
+                elem.clear()
         return result
 
     def write_xml(self, file: IO[bytes]) -> None:
