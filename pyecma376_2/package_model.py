@@ -411,7 +411,6 @@ class OPCPackageWriter(metaclass=abc.ABCMeta):
         return FragmentedPartWriterHandle(name, content_type, self)
 
     def close(self) -> None:
-        self.write_content_types_stream()
         """
         Close the PackageWriter and the underlying physical package.
 
@@ -425,6 +424,8 @@ class OPCPackageWriter(metaclass=abc.ABCMeta):
         This method should be overridden by a descendant class to close the physical package file. The overriding
         function must call this super-type method *before* closing the physical file.
         """
+        if self.content_types_stream_name is not None:
+            self.write_content_types_stream()
 
     def __enter__(self):
         return self
