@@ -8,6 +8,14 @@
 # Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
 # specific language governing permissions and limitations under the License.
+"""
+Implementation of the logical OPC package model
+
+This module provides abstract Reader and Writer classes for logical OPC packages, independent from concrete physical
+mappings, as well as some auxiliary classes and functions for the logical package model. For reading and writing
+actual OPC package files, Reader and Writer classes for a physical OPC package mapping are required, i.e. those from
+the `zip_package` module.
+"""
 
 import abc
 import collections

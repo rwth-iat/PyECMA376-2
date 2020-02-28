@@ -8,9 +8,17 @@
 # Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
 # specific language governing permissions and limitations under the License.
+"""
+Implementation of physical OPC packages in PKZIP files.
+
+This module uses the abstract Reader/Writer classes from the package_model module to extend them for reading and writing
+ZIP-based OPC package files. The resulting `ZipPackageReader` and `ZipPackageWriter` classes are to be used by
+other Python packages to read and write concrete OPC package files. However, they may be imported from `pyecma376_2`'s
+main package.
+"""
 
 import zipfile
-from typing import Iterable, BinaryIO, IO
+from typing import Iterable, IO
 
 from . import package_model
 
