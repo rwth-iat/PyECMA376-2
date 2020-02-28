@@ -27,6 +27,17 @@ RELATIONSHIPS_XML_NAMESPACE = "{http://schemas.openxmlformats.org/package/2006/r
 
 
 class OPCPackageReader(metaclass=abc.ABCMeta):
+    """
+    Abstract implementation of a Reader for logical OPC packages.
+
+    This class provides the base for implementing concrete physical package readers. It implements reading functionality
+    of the logical package model, but omits the mapping to a physical package format. Descendant classes need to
+    override the abstract methods `list_items()` and `open_item()` to implement access to the physical package. They
+    also may override the `close()` method.
+
+    Objects of this class (resp. descendant classes) should be used as context managers: They (somhow) open the physical
+    package at construction time and close it when the `close()` method is called or the with-context is exited. In
+    """
     content_types_stream_name: Optional[str] = None
 
     class _PartDescriptor(types.SimpleNamespace):
@@ -35,13 +46,26 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
         physical_item_name: str
 
     def __init__(self):
+        """
+        The initialization method.
+
+        Descendant classes should override the __init__() method and at least implement the following steps:
+        * calling this init method (`super().__init__()`)
+        * open/prepare the physical package for reading (so `list_items()` and `open_item()` will work)
+        * call `self._init_data()`
+        """
         # dict mapping all known normalized part names to (content type, fragmented, physical item name)
         self._parts: Dict[str, OPCPackageReader._PartDescriptor] = {}
         # A cache for the get_related_parts_by_type() method
         self._related_parts_cache: Dict[str, Dict[str, List[str]]] = {}
 
     def _init_data(self) -> None:
-        """ Part of the initializer which should be called after opening the package """
+        """
+        Part of the initializer, which must be called after the physical package has been opened, to initialize
+        cached part data.
+
+        Must be called by each concrete descendant class in its __init__() method after opening the physical package.
+        """
         # First run: Find all parts (including the Content Types Stream)
         for item_name in self.list_items():
             fragment_match = RE_FRAGMENT_ITEMS.match(item_name)
@@ -69,14 +93,43 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
             del self._parts[self.content_types_stream_name]
 
     def list_parts(self, include_rels_parts=False) -> Iterable[Tuple[str, str]]:
+        """
+        Get all Parts in this package with part name and content type.
+
+        Relationship XML parts can optionally be included into the result. The ContentTypesStream is never included.
+
+        :param include_rels_parts: If True, Relationship XML parts are included into the result.
+        :return: An iterator over a tuple (part name, content type) for each part
+        """
+        # TODO use non-normalized names?
         return ((normalized_name, part_descriptor.content_type)
                 for normalized_name, part_descriptor in self._parts.items()
                 if include_rels_parts or not RE_RELS_PARTS.match(normalized_name))
 
     def get_content_type(self, part_name: str) -> str:
+        """
+        Get a Part's content type.
+
+        :param part_name: An (absolute) part name
+        :return: The Part's content type
+        :raises KeyError: If the Part does not exist in the package
+        """
         return self._parts[normalize_part_name(part_name)].content_type
 
     def open_part(self, name: str) -> IO[bytes]:
+        """
+        Open a Part of the package by its part name.
+
+        The returned value is a file-like object with binary read functionality. It may or may not be seekable (use the
+        usual `seekable()` method to find out. It will most probably not support writing or even may behave in an
+        undefined way when used for writing.
+
+        The returned file-like object shall be closed after usage, using the `.close()` method or using it as a context
+        manager.
+
+        :param name: The (abolsute) part name (must start with a '/')
+        :return: A binary file-like object for reading the part
+        """
         try:
             part_descriptor = self._parts[normalize_part_name(name)]
         except KeyError as e:
@@ -87,25 +140,57 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
             return self.open_item(part_descriptor.physical_item_name)
 
     def get_raw_relationships(self, part_name: str = "/") -> Generator["OPCRelationship", None, None]:
+        """
+        Get an iterator over the relationships of a specific part (or the package itself)
+
+        :param part_name: The (absolute) part name of the source Part of the requested Relationships. If not specified
+            or equal to "/", the package root's relationships are returned.
+        :return: An iterator over the Relationships with the specified source Part as OPCRelationship objects.
+        """
         try:
             rels_part = self.open_part(_rels_part_for(part_name))
         except KeyError:
             return
         yield from self._read_relationships(rels_part)
 
-    def get_related_parts_by_type(self, part_name: str = "/") -> Dict[str, List[str]]:
+    def get_related_parts_by_type(self, part_name: str = "/") -> DefaultDict[str, List[str]]:
+        """
+        Get a dict of all *internal* relationships / related Parts by Relationship type from a given source Part.
+
+        This function reads the relationships with the given source Part and groups all internal Relationships by type.
+        It uses an internal cache to avoid reading and grouping the relationships of the same part multiple times from
+        the package.
+
+        :param part_name: The (absolute) part name of the source Part of the requested Relationships. If not specified
+            or equal to "/", the package root's relationships are returned.
+        :return: A dict, mapping Relationship types to a list of the target Parts of all Relationships with the given
+            source Part and this type. The target Parts' names are transformed to absolute paths, i.e. starting with
+            '/', to be used with `open_part()` or `get_content_type()`. Since the result is a defaultdict, requesting
+            any non-occurring Relationship type will yield an empty list.
+        """
         part_name = normalize_part_name(part_name)
         if part_name in self._related_parts_cache:
             return self._related_parts_cache[part_name]
         result = collections.defaultdict(list)  # type: DefaultDict[str, List[str]]
         for relationship in self.get_raw_relationships(part_name):
             if relationship.target_mode == OPCTargetMode.INTERNAL:
+                # TODO remove normalization?
                 result[relationship.type].append(normalize_part_name(part_realpath(relationship.target, part_name)))
-        freezed_result = dict(result)
-        self._related_parts_cache[part_name] = freezed_result
-        return freezed_result
+        self._related_parts_cache[part_name] = result
+        return result
 
     def close(self) -> None:
+        """
+        Close the PackageReader and the underlying physical package.
+
+        You may as well use the PackageReader as a context manager to make sure it is closed correctly:
+
+            with SomePackageReader(...) as reader:
+                reader.open_part(...)
+                ...
+
+        This method should be overridden by a descendant class to close the physical package file.
+        """
         pass
 
     def __enter__(self):
@@ -116,6 +201,7 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
 
     @staticmethod
     def _read_relationships(rels_part: IO[bytes]) -> Generator["OPCRelationship", None, None]:
+        """ Internal helper method for parsing a Relationship XML part """
         for _event, elem in etree.iterparse(rels_part):
             if elem.tag == RELATIONSHIPS_XML_NAMESPACE + "Relationship":
                 yield OPCRelationship(
@@ -153,6 +239,12 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
 
 
 class FragmentedPartReader(io.RawIOBase):
+    """
+    Helper class for reading fragmented/interleaved Parts like a single file.
+
+    This class behaves like a readable, non-seekable, binary file-like object. Its read() method reads from all
+    items/fragments of the Part sequentially, opening the next item as soon as the current is empty.
+    """
     def __init__(self, name: str, reader: OPCPackageReader):
         self._name: str = name
         self._reader: OPCPackageReader = reader
@@ -180,6 +272,17 @@ class FragmentedPartReader(io.RawIOBase):
         return False
 
     def read(self, size: int = -1) -> Optional[bytes]:
+        """
+        Read new bytes from the (fragmented) part.
+
+        This function issues only one read() request / system call to the underlying physical package, unless
+        size == -1. This is compatible to the behavior of Python file objects.
+
+        :param size: Maximum number of bytes to be read. If size == -1, multiple system calls are issued to read the
+            whole part at once.
+        :return: The next bytes of the part or None if the underlying physical item is a stream and no bytes are
+            currently available.
+        """
         result = self._current_item_handle.read(size)
         while result is not None and (size == -1 or 0 == len(result) < size) and not self._finished:
             self._current_item_handle.close()
