@@ -11,6 +11,7 @@
 """ Tests for the main Reader/Writer functionality of the PyECMA376_2 package"""
 
 import os.path
+import tempfile
 import unittest
 
 import lxml.etree as etree  # type: ignore
@@ -47,10 +48,10 @@ class TestZipReader(unittest.TestCase):
 
 class TestZipWriter(unittest.TestCase):
     def test_rewrite_docx(self):
+        handle, new_filename = tempfile.mkstemp(suffix=".docx")
         file_name = os.path.join(os.path.dirname(__file__), "empty_document.docx")
-        file_name_new = os.path.join(os.path.dirname(__file__), "empty_document_new.docx")
         reader = pyecma376_2.ZipPackageReader(file_name)
-        writer = pyecma376_2.ZipPackageWriter(file_name_new)
+        writer = pyecma376_2.ZipPackageWriter(new_filename)
 
         writer.write_relationships(reader.get_raw_relationships())
         for name, content_type in reader.list_parts():
@@ -63,14 +64,17 @@ class TestZipWriter(unittest.TestCase):
         writer.close()
         reader.close()
 
-        with pyecma376_2.ZipPackageReader(file_name_new) as reader:
+        with pyecma376_2.ZipPackageReader(new_filename) as reader:
             parts = list(reader.list_parts(True))
             self.assertGreater(len(parts), 0)
             package_rels = list(reader.get_raw_relationships())
             self.assertGreater(len(package_rels), 0)
 
+        os.unlink(new_filename)
+
     def test_write_example(self):
-        with pyecma376_2.ZipPackageWriter("new_document.myx") as writer:
+        handle, filename = tempfile.mkstemp(suffix=".myx")
+        with pyecma376_2.ZipPackageWriter(filename) as writer:
             # Add a part
             with writer.open_part("/example/document.txt", "text/plain") as part:
                 part.write("Lorem ipsum dolor sit amet.".encode())
@@ -82,3 +86,4 @@ class TestZipWriter(unittest.TestCase):
                 pyecma376_2.OPCRelationship("r2", "http://example.com/my-document-rel", "example/document.txt",
                                             pyecma376_2.OPCTargetMode.INTERNAL),
             ])
+        os.unlink(filename)
