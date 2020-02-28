@@ -65,7 +65,7 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
         # dict mapping all known normalized part names to (content type, fragmented, physical item name)
         self._parts: Dict[str, OPCPackageReader._PartDescriptor] = {}
         # A cache for the get_related_parts_by_type() method
-        self._related_parts_cache: Dict[str, Dict[str, List[str]]] = {}
+        self._related_parts_cache: Dict[str, DefaultDict[str, List[str]]] = {}
 
     def _init_data(self) -> None:
         """
@@ -218,7 +218,6 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
                     elem.attrib["Target"],
                     OPCTargetMode.from_serialization(elem.attrib.get('TargetMode', 'Internal')))
                 elem.clear()
-
 
     @abc.abstractmethod
     def list_items(self) -> Iterable[str]:
