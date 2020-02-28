@@ -39,12 +39,13 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
     Abstract implementation of a Reader for logical OPC packages.
 
     This class provides the base for implementing concrete physical package readers. It implements reading functionality
-    of the logical package model, but omits the mapping to a physical package format. Descendant classes need to
-    override the abstract methods `list_items()` and `open_item()` to implement access to the physical package. They
-    also may override the `close()` method.
+    of the logical package model (Parts, Relationships, ContentTypes, mapping to logical Items), but omits the mapping
+    to a physical package format (reading of physical Items). Descendant classes need to override the abstract methods
+    `list_items()` and `open_item()` to implement access to the physical package. They also may override the `close()`
+    method.
 
     Objects of this class (resp. descendant classes) should be used as context managers: They (somhow) open the physical
-    package at construction time and close it when the `close()` method is called or the with-context is exited. In
+    package at construction time and close it when the `close()` method is called or the with-context is exited.
     """
     content_types_stream_name: Optional[str] = None
 
@@ -233,7 +234,7 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def open_item(self, name: str) -> IO[bytes]:
         """
-        Open an item of the underlying physical package by logical item name.
+        Internal method to open an item of the underlying physical package by logical item name.
 
         This function must be overridden by concrete physical mappings of the pacakge model. It must implement the
         mapping of logical item names to physical item names and access to the physical bytestream. It does *not* need
@@ -304,6 +305,17 @@ class FragmentedPartReader(io.RawIOBase):
 
 
 class OPCPackageWriter(metaclass=abc.ABCMeta):
+    """
+    Abstract implementation of a Writer for logical OPC packages.
+
+    This class provides the base for implementing concrete physical package writers. It implements writing functionality
+    of the logical package model (Parts, Relationships, ContentTypes, mapping to logical Items), but omits the mapping
+    to a physical package format (writing of Items). Descendant classes need to override the abstract method
+    `create_item()` to implement access to the physical package. They also may override the `close()` method.
+
+    Objects of this class (resp. descendant classes) should be used as context managers: They (somhow) open the physical
+    package at construction time and close it when the `close()` method is called or the with-context is exited.
+    """
     content_types_stream_name: Optional[str] = None
 
     def __init__(self):
@@ -312,6 +324,23 @@ class OPCPackageWriter(metaclass=abc.ABCMeta):
             self.content_types_written = False
 
     def open_part(self, name: str, content_type: str) -> IO[bytes]:
+        """
+        Create a new Part with the given part name and open it as file-like object for writing.
+
+        The part name shall be unique. Each part shall only be created/written once. The returned file-like object shall
+        be closed after usage, using the `.close()` method or using it as a context manager.
+
+        This method will make sure that the Part's Content Type is correctly specified in the Package. If the physical
+        package format does not support native part Content Types and the Part's Content Type is currently not correctly
+        reflected by the `content_types.default_types`, a Content Type override for this part will be added.
+
+        :param name: The new Part's part name. Must be an absolute and unique name, i.e. starting with a '/' and occur
+            for the first time.
+        :param content_type: The new Part's content type
+        :return: A writable, binary file-like object to write the contents of the Part into it
+        :raises RuntimeError: If a Content Type override must be added, but the ContentTypesStream has already been
+            written.
+        """
         name = normalize_part_name(name)
         check_part_name(name)
         if self.content_types_stream_name is not None:
@@ -324,6 +353,14 @@ class OPCPackageWriter(metaclass=abc.ABCMeta):
         return self.create_item(name, content_type)
 
     def write_relationships(self, relationships: Iterable["OPCRelationship"], part_name: str = "/") -> None:
+        """
+        Create and write the accompanying Relationships part for a given Part
+
+        This method must only be called once for each Part.
+
+        :param relationships: The list of relationships to be added
+        :param part_name: The part name of the source Part of the relationships
+        """
         # We do currently not support fragmented relationships parts
         part_name = normalize_part_name(part_name)
         if part_name != "/":
@@ -333,6 +370,35 @@ class OPCPackageWriter(metaclass=abc.ABCMeta):
             self._write_relationships(i, relationships)
 
     def create_fragmented_part(self, name: str, content_type: str) -> "FragmentedPartWriterHandle":
+        """
+        Create a new fragmented/interleaved Part with the given part name
+
+        The part name shall be unique. Each part shall only be created once.
+
+        This function returns a handle which can be used to open individual fragments (items) of the part, using its
+        `open()` method. The handle's `open()` method returns file-like object for writing the Part fragment's contents
+        and shall be closed after usage, using the `.close()` method or using it as a context manager:
+
+            with SomePackageWriter(...) as writer:
+                handle = writer.create_fragmented_part("/foo.txt", "text/plain")
+                with handle.open() as f:
+                    f.write(b"Hello, ")
+                with writer.open_part("/bar.txt", "text/plain") as f:
+                    f.write(b"Other part's contents")
+                with handle.open(last=True) as f:
+                    f.write(b"World!")
+
+        This method will make sure that the Part's Content Type is correctly specified in the Package. If the physical
+        package format does not support native part Content Types and the Part's Content Type is currently not correctly
+        reflected by the `content_types.default_types`, a Content Type override for this part will be added.
+
+        :param name: The new Part's part name. Must be an absolute and unique name, i.e. starting with a '/' and occur
+            for the first time.
+        :param content_type: The new Part's content type
+        :return: A handle to create and open individual fragments of this part
+        :raises RuntimeError: If a Content Type override must be added, but the ContentTypesStream has already been
+            written.
+        """
         part_name = normalize_part_name(name)
         check_part_name(part_name)
         if self.content_types_stream_name is not None:
@@ -346,6 +412,19 @@ class OPCPackageWriter(metaclass=abc.ABCMeta):
 
     def close(self) -> None:
         self.write_content_types_stream()
+        """
+        Close the PackageWriter and the underlying physical package.
+
+        This method will also trigger writing the Content
+        You may as well use the PackageWriter as a context manager to make sure it is always closed correctly:
+
+            with SomePackageReader(...) as reader:
+                reader.open_part(...)
+                ...
+
+        This method should be overridden by a descendant class to close the physical package file. The overriding
+        function must call this super-type method *before* closing the physical file.
+        """
 
     def __enter__(self):
         return self
@@ -354,6 +433,20 @@ class OPCPackageWriter(metaclass=abc.ABCMeta):
         self.close()
 
     def write_content_types_stream(self) -> None:
+        """
+        Prematurely create and write the ContentTypesStream into the physical package, based on the `content_types`
+
+        This method may be used to control, when the ContentTypesStream ("/[Content_Types].xml" in ZIP packages) is
+        written into the physical package. If this method is not called by the user, the ContentTypesStream is
+        written when closing the PackageWriter, i.e. at the (physical) end of the package file/stream.
+
+        After this method has been called, modifications to the `content_types` will have no effect anymore. Thus,
+        all Parts' Content Types must already be known and included in the `content_types` (either as Default Type or as
+        an Override) when calling `write_content_types_stream()`.
+
+        :raises RuntimeError: If the physical package type supports native Content Types, so no ContentTypesStream is
+            required.
+        """
         # We do currently not support interleaved Content Types Streams yet
         if self.content_types_stream_name is None:
             raise RuntimeError("Physical Package Format uses native content types. No Content Types Stream is required")
@@ -365,10 +458,22 @@ class OPCPackageWriter(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def create_item(self, name: str, content_type: str) -> IO[bytes]:
+        """
+        Internal method to create and open an item of the underlying physical package by logical item name.
+
+        This function must be overridden by concrete physical mappings of the pacakge model. It must implement the
+        mapping of logical item names to physical item names and access to the physical bytestream. It does *not* need
+        to implement normaliziation of logical item names.
+
+        :param name: The logical item name of the item to be created (e.g. "/[Content_Types].xml",
+            "/foo.txt/[1].piece").
+        :return: A binary, writable file-like object for the item
+        """
         pass
 
     @staticmethod
     def _write_relationships(rels_part: IO[bytes], relationships: Iterable["OPCRelationship"]) -> None:
+        """ Internal helper function to serialize and write a list of Relationships into an XML Relationships part """
         with etree.xmlfile(rels_part, encoding="UTF-8") as xf:
             with xf.element(RELATIONSHIPS_XML_NAMESPACE + "Relationships",
                             nsmap={None: RELATIONSHIPS_XML_NAMESPACE[1:-1]}):
@@ -381,6 +486,12 @@ class OPCPackageWriter(metaclass=abc.ABCMeta):
 
 
 class FragmentedPartWriterHandle:
+    """
+    Handle for writing fragmented/interleaved Parts via OPCPackageWriter.
+
+    Objects of this class are created by `OPCPackageWriter.create_fragmented_part()`. They provide an `open()` method
+    to open each individual item/fragement of the Part for writing.
+    """
     def __init__(self, name: str, content_type: str, writer: OPCPackageWriter):
         self.name: str = name
         self.content_type = content_type
@@ -389,6 +500,18 @@ class FragmentedPartWriterHandle:
         self.finished = False
 
     def open(self, last: bool = False) -> IO[bytes]:
+        """
+        Open a new fragement/item of the fragmented Part described by this handle for writing.
+
+        The returned file-like object must be closed after usage, using the `.close()` method or using it as a context
+        manager.
+        The `last` argument *must* be set to True when opening the last fragment of the part. Afterwards, no other
+        fragment can be opened anymore.
+
+        :param last: True if this will be the last fragment of the Part, False otherwise
+        :return: A writable, binary object to write the fragment's contents.
+        :raises RuntimeError: when trying to open another fragment after the `last` fragment.
+        """
         if self.finished:
             raise RuntimeError("Fragmented Part {} has already been finished".format(self.name))
         f = self.writer.create_item("{}/[{}]{}.piece".format(self.name, self.fragment_number, ".last" if last else ""),
