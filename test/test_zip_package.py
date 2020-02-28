@@ -87,3 +87,25 @@ class TestZipWriter(unittest.TestCase):
                                             pyecma376_2.OPCTargetMode.INTERNAL),
             ])
         os.unlink(filename)
+
+    def test_write_fragmented(self):
+        handle, filename = tempfile.mkstemp(suffix=".myx")
+
+        with pyecma376_2.ZipPackageWriter(filename) as writer:
+            handle = writer.create_fragmented_part("/foo.txt", "text/plain")
+            with handle.open() as f:
+                f.write(b"Hello, ")
+            with writer.open_part("/bar.txt", "text/plain") as f:
+                f.write(b"Other part's contents")
+            with handle.open(last=True) as f:
+                f.write(b"World!")
+
+        with pyecma376_2.ZipPackageReader(filename) as reader:
+            with reader.open_part("/foo.txt") as f:
+                foo_content = f.read()
+            with reader.open_part("/bar.txt") as f:
+                bar_content = f.read()
+        self.assertEqual(b"Hello, World!", foo_content)
+        self.assertEqual(b"Other part's contents", bar_content)
+
+        os.unlink(filename)
