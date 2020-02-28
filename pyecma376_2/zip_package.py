@@ -16,9 +16,9 @@ ZIP-based OPC package files. The resulting `ZipPackageReader` and `ZipPackageWri
 other Python packages to read and write concrete OPC package files. However, they may be imported from `pyecma376_2`'s
 main package.
 """
-
+import os
 import zipfile
-from typing import Iterable, IO
+from typing import Iterable, IO, Union
 
 from . import package_model
 
@@ -28,7 +28,7 @@ CONTENT_TYPES_STREAM_NAME = "/[Content_Types].xml"
 class ZipPackageReader(package_model.OPCPackageReader, zipfile.ZipFile):
     content_types_stream_name = package_model.normalize_part_name(CONTENT_TYPES_STREAM_NAME)
 
-    def __init__(self, file):
+    def __init__(self, file: Union[os.PathLike, str, IO]) -> None:
         package_model.OPCPackageReader.__init__(self)
         zipfile.ZipFile.__init__(self, file)
         self._init_data()
@@ -47,7 +47,7 @@ class ZipPackageReader(package_model.OPCPackageReader, zipfile.ZipFile):
 class ZipPackageWriter(package_model.OPCPackageWriter, zipfile.ZipFile):
     content_types_stream_name = CONTENT_TYPES_STREAM_NAME
 
-    def __init__(self, file):
+    def __init__(self, file: Union[os.PathLike, str, IO]) -> None:
         package_model.OPCPackageWriter.__init__(self)
         zipfile.ZipFile.__init__(self, file, mode='w')
 
