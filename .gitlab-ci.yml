@@ -1,0 +1,35 @@
+image: python:3.6
+
+# Change pip's package cache directory to be inside the project directory to allow caching via Gitlab CI
+variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+cache:
+  paths:
+    - .cache/pip
+
+test:
+  stage: test
+  script:
+  # Install python testing dependencies
+  - pip install --cache-dir="$PIP_CACHE_DIR" mypy pycodestyle unittest-xml-reporting coverage
+  - pip install --cache-dir="$PIP_CACHE_DIR" -r requirements.txt
+  # Run tests
+  - coverage run --source pyecma376_2 --branch -m xmlrunner -o testreports
+  # Report test coverage; check typing and codestyle
+  - coverage report -m
+  - mypy pyecma376_2 test
+  - python -m pycodestyle --count --max-line-length 120 pyecma376_2 test
+
+  artifacts:
+    reports:
+      junit: testreports/*.xml
+
+build:
+  stage: deploy
+  script:
+    - python setup.py sdist
+
+  artifacts:
+    paths:
+      - dist/*.tar.gz
