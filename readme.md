@@ -70,7 +70,7 @@ import pyecma376_2
 
 with pyecma376_2.ZipPackageWriter("new_document.myx") as writer:
     # Add a part
-    with writer.open_part("example/document.txt", "text/plain") as part:
+    with writer.open_part("/example/document.txt", "text/plain") as part:
         part.write("Lorem ipsum dolor sit amet.".encode())
     
     # Write the packages root relationships

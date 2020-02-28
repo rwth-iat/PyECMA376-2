@@ -68,3 +68,17 @@ class TestZipWriter(unittest.TestCase):
             self.assertGreater(len(parts), 0)
             package_rels = list(reader.get_raw_relationships())
             self.assertGreater(len(package_rels), 0)
+
+    def test_write_example(self):
+        with pyecma376_2.ZipPackageWriter("new_document.myx") as writer:
+            # Add a part
+            with writer.open_part("/example/document.txt", "text/plain") as part:
+                part.write("Lorem ipsum dolor sit amet.".encode())
+
+            # Write the packages root relationships
+            writer.write_relationships([
+                pyecma376_2.OPCRelationship("r1", "http://example.com/my-package-relationship-id", "http://example.com",
+                                            pyecma376_2.OPCTargetMode.EXTERNAL),
+                pyecma376_2.OPCRelationship("r2", "http://example.com/my-document-rel", "example/document.txt",
+                                            pyecma376_2.OPCTargetMode.INTERNAL),
+            ])
