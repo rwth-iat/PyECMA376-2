@@ -16,7 +16,7 @@ with open("readme.md", "r") as fh:
 
 setuptools.setup(
     name="pyecma376-2",
-    version="0.1.1",
+    version="0.2.0",
     author="Michael Thies",
     author_email="mail@mhthies.de",
     description="Library for reading and writing ECMA 376-2 (Open Packaging Conventions) files",
