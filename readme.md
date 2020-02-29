@@ -17,18 +17,19 @@ However, it does not provide functionality to deal with the packages' payload, i
   * listing contained Parts (incl. Content Type)
   * reading Parts as file-like objects (incl. interleaved Parts)
   * parsing and following Relationships
+  * parsing package meta data (“Core Properties”)
 
 * writing OPC package files
   * creating and writing Parts (via writable file-like objects, incl. interleaved Parts)
   * adding Relationships (as simple Python objects)
   * adding Content Type information
+  * composing and writing package meta data (“Core Properties”)
 
 Modifying packages in-place is **not** supported.
 
 
 ### Currently Missing Features
 
-* parsing/Writing package meta data (“Core Properties”) **(WIP)**
 * retrieving/adding package thumbnail image
 * reading/verifying/creating cryptographic signatures
 
@@ -57,6 +58,10 @@ with pyecma376_2.ZipPackageReader("document.docx") as reader:
     document_part_name = reader.get_related_parts_by_type("/")[
         'http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument'][0]
 
+    # Read core properties (package meta data)
+    core_props = reader.get_core_properties()
+    print(core_props.creator)
+
     # Open part as (binary) file-like object
     with reader.open_part(document_part_name) as part:
         # XML parsing and document interpretation goes here
@@ -67,17 +72,27 @@ Short example of creating and writing into an OPC package file:
 
 ```python
 import pyecma376_2
+import datetime
 
 with pyecma376_2.ZipPackageWriter("new_document.myx") as writer:
     # Add a part
     with writer.open_part("/example/document.txt", "text/plain") as part:
         part.write("Lorem ipsum dolor sit amet.".encode())
+
+    # Write core properties (meta data)
+    # To make those work, we need to add the RELATIONSHIP_TYPE_CORE_PROPERTIES relationship below. 
+    cp = pyecma376_2.OPCCoreProperties()
+    cp.created = datetime.datetime.now()
+    with writer.open_part("/docProps/core.xml", "application/xml") as part:
+        cp.write_xml(part)
     
     # Write the packages root relationships
     writer.write_relationships([
         pyecma376_2.OPCRelationship("r1", "http://example.com/my-package-relationship-id", "http://example.com",
                                     pyecma376_2.OPCTargetMode.EXTERNAL),
         pyecma376_2.OPCRelationship("r2", "http://example.com/my-document-rel", "example/document.txt",
+                                    pyecma376_2.OPCTargetMode.INTERNAL),
+        pyecma376_2.OPCRelationship("r3", pyecma376_2.RELATIONSHIP_TYPE_CORE_PROPERTIES, "docProps/core.xml",
                                     pyecma376_2.OPCTargetMode.INTERNAL),
     ])
     
