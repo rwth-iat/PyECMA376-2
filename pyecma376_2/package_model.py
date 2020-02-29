@@ -35,6 +35,12 @@ RE_RELS_PARTS = re.compile(r'^(.*/)_rels/([^/]*).rels$', re.IGNORECASE)
 RE_FRAGMENT_ITEMS = re.compile(r'^(.*)/\[(\d+)\](.last)?.piece$', re.IGNORECASE)
 RELATIONSHIPS_XML_NAMESPACE = "{http://schemas.openxmlformats.org/package/2006/relationships}"
 
+RELATIONSHIP_TYPE_CORE_PROPERTIES = \
+    "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties"
+RELATIONSHIP_TYPE_THUMBNAIL = "http://schemas.openxmlformats.org/package/2006/relationships/metadata/thumbnail"
+RELATIONSHIP_TYPE_DIGITAL_SIG_ORIGIN = \
+    "http://schemas.openxmlformats.org/package/2006/relationships/digital-signature/origin"
+
 
 class OPCPackageReader(metaclass=abc.ABCMeta):
     """
@@ -200,7 +206,7 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
         """
         rels = self.get_related_parts_by_type()
         try:
-            part_name = rels["http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties"][0]
+            part_name = rels[RELATIONSHIP_TYPE_CORE_PROPERTIES][0]
         except IndexError:
             return OPCCoreProperties()
         with self.open_part(part_name) as p:

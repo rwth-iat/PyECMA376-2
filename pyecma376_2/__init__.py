@@ -9,6 +9,7 @@
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
 # specific language governing permissions and limitations under the License.
 
-from .package_model import OPCRelationship, OPCTargetMode
+from .package_model import OPCRelationship, OPCTargetMode, RELATIONSHIP_TYPE_CORE_PROPERTIES,\
+    RELATIONSHIP_TYPE_THUMBNAIL
 from .zip_package import ZipPackageReader, ZipPackageWriter
 from .core_properties import OPCCoreProperties
