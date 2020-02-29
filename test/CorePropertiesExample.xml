@@ -15,4 +15,9 @@
     <dcterms:modified xsi:type="dcterms:W3CDTF">2005-11-23</dcterms:modified>
     <contentStatus>Reviewed</contentStatus>
     <category>Specification</category>
+    <keywords xml:lang="en-US">
+        color
+        <value xml:lang="en-CA">colour</value>
+        <value xml:lang="fr-FR">couleur</value>
+    </keywords>
 </coreProperties>

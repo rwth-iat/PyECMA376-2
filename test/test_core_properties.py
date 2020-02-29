@@ -1,4 +1,5 @@
 import datetime
+import io
 import os.path
 import unittest
 
@@ -14,3 +15,24 @@ class CorePropertiesTest(unittest.TestCase):
         self.assertEqual("Reviewed", cp.contentStatus)
         self.assertEqual("OPC Core Properties", cp.title)
         self.assertEqual(datetime.date(2005, 6, 12), cp.created)
+        self.assertListEqual([('en-US', "color"), ('en-CA', "colour"), ('fr-FR', "couleur")],
+                             cp.keywords)  # type: ignore
+
+    def test_serializing_core_properties(self) -> None:
+        cp = pyecma376_2.OPCCoreProperties()
+        cp.contentStatus = "Reviewed"
+        cp.title = "OPC Core Properties"
+        cp.created = datetime.date(2005, 6, 12)
+        cp.keywords = [('en-US', "color"), ('en-CA', "colour"), ('fr-FR', "couleur")]
+
+        f = io.BytesIO()
+        cp.write_xml(f)
+        f.seek(0)
+
+        cp2 = pyecma376_2.OPCCoreProperties.from_xml(f)
+
+        self.assertEqual("Reviewed", cp2.contentStatus)
+        self.assertEqual("OPC Core Properties", cp2.title)
+        self.assertEqual(datetime.date(2005, 6, 12), cp2.created)
+        self.assertListEqual([('en-US', "color"), ('en-CA', "colour"), ('fr-FR', "couleur")],
+                             cp2.keywords)  # type: ignore
