@@ -36,3 +36,10 @@ class CorePropertiesTest(unittest.TestCase):
         self.assertEqual(datetime.date(2005, 6, 12), cp2.created)
         self.assertListEqual([('en-US', "color"), ('en-CA', "colour"), ('fr-FR', "couleur")],
                              cp2.keywords)  # type: ignore
+
+    def test_read_empty_doc_properties(self) -> None:
+        file_name = os.path.join(os.path.dirname(__file__), "empty_document.docx")
+        with pyecma376_2.ZipPackageReader(file_name) as reader:
+            core_properties = reader.get_core_properties()
+        self.assertEqual("Michael Thies", core_properties.creator)
+        self.assertEqual(2020, core_properties.created.year)

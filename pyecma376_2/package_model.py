@@ -29,6 +29,8 @@ import urllib.parse
 import lxml.etree as etree  # type: ignore
 from typing import BinaryIO, Sequence, Dict, Iterable, NamedTuple, Optional, IO, Generator, List, DefaultDict, Tuple
 
+from .core_properties import OPCCoreProperties
+
 RE_RELS_PARTS = re.compile(r'^(.*/)_rels/([^/]*).rels$', re.IGNORECASE)
 RE_FRAGMENT_ITEMS = re.compile(r'^(.*)/\[(\d+)\](.last)?.piece$', re.IGNORECASE)
 RELATIONSHIPS_XML_NAMESPACE = "{http://schemas.openxmlformats.org/package/2006/relationships}"
@@ -187,6 +189,22 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
                 result[relationship.type].append(normalize_part_name(part_realpath(relationship.target, part_name)))
         self._related_parts_cache[part_name] = result
         return result
+
+    def get_core_properties(self) -> OPCCoreProperties:
+        """
+        Convenience method to find, read and parse the package's Core Properties.
+
+        If the package does not contain a Core Properties Part, an empty Core Properties object is returned. If more
+        than one Core Properties Parts are contained in the package (which is not inadmissible according to the
+        standard), only the first one is parsed.
+        """
+        rels = self.get_related_parts_by_type()
+        try:
+            part_name = rels["http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties"][0]
+        except IndexError:
+            return OPCCoreProperties()
+        with self.open_part(part_name) as p:
+            return OPCCoreProperties.from_xml(p)
 
     def close(self) -> None:
         """

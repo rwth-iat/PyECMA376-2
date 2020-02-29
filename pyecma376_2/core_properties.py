@@ -49,7 +49,7 @@ def _extract_datetime(el: etree.Element) -> Optional[Union[datetime.datetime, da
             int(match[7]) if match[7] else 0,
             int(match[9]) if match[9] else 0,
             int(match[11]) if match[11] else 0,
-            int(float(match[8]) * 1e6) if match[9] else 0,
+            int(float(match[12]) * 1e6) if match[12] else 0,
             _parse_xsd_date_tzinfo(match[13])
         )
     else:
