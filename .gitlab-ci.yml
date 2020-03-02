@@ -25,7 +25,7 @@ test:
     reports:
       junit: testreports/*.xml
 
-build:
+package:
   stage: deploy
   script:
     - python setup.py sdist
@@ -33,3 +33,15 @@ build:
   artifacts:
     paths:
       - dist/*.tar.gz
+
+publish:
+  stage: deploy
+  only:
+    - /^v\d+(\.\d+)*$/
+  except:
+    - branches
+  dependencies:
+    - package
+  script:
+    - pip install --cache-dir="$PIP_CACHE_DIR" twine
+    - twine upload dist/*.tar.gz
