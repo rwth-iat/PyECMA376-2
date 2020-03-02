@@ -30,7 +30,6 @@ Modifying packages in-place is **not** supported.
 
 ### Currently Missing Features
 
-* retrieving/adding package thumbnail image
 * reading/verifying/creating cryptographic signatures
 
 
