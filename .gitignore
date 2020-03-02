@@ -1,3 +1,14 @@
+# Python caches
 __pycache__/
-/.idea/
 /.mypy_cache/
+
+# Coverage output
+/.coverage
+/htmlcov
+
+# IDE data
+/.idea/
+
+# Setuptools output
+/dist/
+/*.egg-info/
