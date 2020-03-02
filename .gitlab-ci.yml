@@ -1,5 +1,11 @@
 image: python:3.6
 
+stages:
+  - build
+  - test
+  - package
+  - deploy
+
 # Change pip's package cache directory to be inside the project directory to allow caching via Gitlab CI
 variables:
     PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
@@ -26,7 +32,7 @@ test:
       junit: testreports/*.xml
 
 package:
-  stage: deploy
+  stage: package
   script:
     - python setup.py sdist
 
