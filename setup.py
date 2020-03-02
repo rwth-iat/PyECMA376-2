@@ -19,6 +19,7 @@ setuptools.setup(
     version="0.2.0",
     author="Michael Thies",
     author_email="mail@mhthies.de",
+    url="https://git.rwth-aachen.de/acplt/pyecma376-2",
     description="Library for reading and writing ECMA 376-2 (Open Packaging Conventions) files",
     long_description=long_description,
     long_description_content_type="text/markdown",
