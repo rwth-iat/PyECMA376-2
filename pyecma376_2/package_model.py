@@ -118,8 +118,7 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
         :param include_rels_parts: If True, Relationship XML parts are included into the result.
         :return: An iterator over a tuple (part name, content type) for each part
         """
-        # TODO use non-normalized names?
-        return ((normalized_name, part_descriptor.content_type)
+        return ((part_descriptor.physical_item_name, part_descriptor.content_type)
                 for normalized_name, part_descriptor in self._parts.items()
                 if include_rels_parts or not RE_RELS_PARTS.match(normalized_name))
 
@@ -191,8 +190,7 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
         result = collections.defaultdict(list)  # type: DefaultDict[str, List[str]]
         for relationship in self.get_raw_relationships(part_name):
             if relationship.target_mode == OPCTargetMode.INTERNAL:
-                # TODO remove normalization?
-                result[relationship.type].append(normalize_part_name(part_realpath(relationship.target, part_name)))
+                result[relationship.type].append(part_realpath(relationship.target, part_name))
         self._related_parts_cache[part_name] = result
         return result
 
@@ -358,14 +356,13 @@ class OPCPackageWriter(metaclass=abc.ABCMeta):
         package format does not support native part Content Types and the Part's Content Type is currently not correctly
         reflected by the `content_types.default_types`, a Content Type override for this part will be added.
 
-        :param name: The new Part's part name. Must be an absolute and unique name, i.e. starting with a '/' and occur
-            for the first time.
+        :param name: The new Part's part name. Must be an absolute and unique name in URI notation, i.e. starting with
+            a '/', occur for the first time, and not contain non-ASCII characters.
         :param content_type: The new Part's content type
         :return: A writable, binary file-like object to write the contents of the Part into it
         :raises RuntimeError: If a Content Type override must be added, but the ContentTypesStream has already been
             written.
         """
-        name = normalize_part_name(name)
         check_part_name(name)
         if self.content_types_stream_name is not None:
             if self.content_types.get_content_type(name) != content_type:
@@ -383,10 +380,9 @@ class OPCPackageWriter(metaclass=abc.ABCMeta):
         This method must only be called once for each Part.
 
         :param relationships: The list of relationships to be added
-        :param part_name: The part name of the source Part of the relationships
+        :param part_name: The part name of the source Part of the relationships (as absolute, URI path)
         """
         # We do currently not support fragmented relationships parts
-        part_name = normalize_part_name(part_name)
         if part_name != "/":
             # "/" is a special case, as it is allowed to end on a "/"
             check_part_name(part_name)
@@ -416,15 +412,14 @@ class OPCPackageWriter(metaclass=abc.ABCMeta):
         package format does not support native part Content Types and the Part's Content Type is currently not correctly
         reflected by the `content_types.default_types`, a Content Type override for this part will be added.
 
-        :param name: The new Part's part name. Must be an absolute and unique name, i.e. starting with a '/' and occur
-            for the first time.
+        :param name: The new Part's part name. Must be an absolute and unique name in URI notation, i.e. starting with
+            a '/', occur for the first time, and not containing non-ASCII characters.
         :param content_type: The new Part's content type
         :return: A handle to create and open individual fragments of this part
         :raises RuntimeError: If a Content Type override must be added, but the ContentTypesStream has already been
             written.
         """
-        part_name = normalize_part_name(name)
-        check_part_name(part_name)
+        check_part_name(name)
         if self.content_types_stream_name is not None:
             if self.content_types.get_content_type(name) != content_type:
                 if self.content_types_written:
