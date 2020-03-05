@@ -49,7 +49,7 @@ class ZipPackageWriter(package_model.OPCPackageWriter, zipfile.ZipFile):
 
     def __init__(self, file: Union[os.PathLike, str, IO]) -> None:
         package_model.OPCPackageWriter.__init__(self)
-        zipfile.ZipFile.__init__(self, file, mode='w')
+        zipfile.ZipFile.__init__(self, file, mode='w', compression=zipfile.ZIP_DEFLATED, compresslevel=-1)
 
     def close(self) -> None:
         package_model.OPCPackageWriter.close(self)
