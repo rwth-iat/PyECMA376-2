@@ -12,7 +12,7 @@
 
 import unittest
 
-from pyecma376_2.package_model import part_realpath
+from pyecma376_2.package_model import part_realpath, check_part_name
 
 
 class TestUtilFunctions(unittest.TestCase):
@@ -20,3 +20,19 @@ class TestUtilFunctions(unittest.TestCase):
         self.assertEqual("/word/document.xml", part_realpath("word/document.xml", "/"))
         self.assertEqual("/word/document.xml", part_realpath("./document.xml", "/word/anotherPart.xml"))
         self.assertEqual("/document.xml", part_realpath("../document.xml", "/word/anotherPart.xml"))
+        self.assertEqual("/document.xml", part_realpath("/document.xml", "/word/anotherPart.xml"))
+
+    def test_check_part_name(self) -> None:
+        check_part_name("/word/document.xml")
+        # Part names must start with '/'
+        with self.assertRaises(ValueError):
+            check_part_name("word/document.xml")
+        # Part names must not end with '/'
+        with self.assertRaises(ValueError):
+            check_part_name("/word/document/")
+        # Unicode characters (IRIs) are not allowed, must be URI-encoded
+        with self.assertRaises(ValueError):
+            check_part_name("/schönes/Dokument")
+        # Part names must not contain encoded '/'
+        with self.assertRaises(ValueError):
+            check_part_name("/ein%2fDokument.xml")

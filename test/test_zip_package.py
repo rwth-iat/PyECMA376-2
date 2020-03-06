@@ -30,6 +30,9 @@ class TestZipReader(unittest.TestCase):
         document_part = reader.get_related_parts_by_type()[
             'http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument'][0]
         self.assertEqual("/word/document.xml", document_part)
+        core_properties_part = reader.get_related_parts_by_type()[
+            pyecma376_2.RELATIONSHIP_TYPE_CORE_PROPERTIES][0]
+        self.assertEqual(pyecma376_2.DEFAULT_CORE_PROPERTIES_NAME, core_properties_part)
         document_rels = list(reader.get_raw_relationships("/word/document.xml"))
         self.assertGreater(len(document_rels), 0)
 
@@ -47,7 +50,7 @@ class TestZipReader(unittest.TestCase):
 
 
 class TestZipWriter(unittest.TestCase):
-    def test_rewrite_docx(self):
+    def test_rewrite_docx(self) -> None:
         handle, new_filename = tempfile.mkstemp(suffix=".docx")
         file_name = os.path.join(os.path.dirname(__file__), "empty_document.docx")
         reader = pyecma376_2.ZipPackageReader(file_name)
@@ -72,7 +75,7 @@ class TestZipWriter(unittest.TestCase):
 
         os.unlink(new_filename)
 
-    def test_write_example(self):
+    def test_write_example(self) -> None:
         handle, filename = tempfile.mkstemp(suffix=".myx")
         with pyecma376_2.ZipPackageWriter(filename) as writer:
             # Add a part
@@ -98,10 +101,14 @@ class TestZipWriter(unittest.TestCase):
             ])
         os.unlink(filename)
 
-    def test_write_fragmented(self):
+    def test_write_fragmented(self) -> None:
+        """ Test the writing of interleaved parts. Also test premature writing of ContentTypes (using defaults)"""
         handle, filename = tempfile.mkstemp(suffix=".myx")
 
         with pyecma376_2.ZipPackageWriter(filename) as writer:
+            writer.content_types.default_types['txt'] = "text/plain"
+            writer.write_content_types_stream()
+
             handle = writer.create_fragmented_part("/foo.txt", "text/plain")
             with handle.open() as f:
                 f.write(b"Hello, ")
@@ -119,3 +126,16 @@ class TestZipWriter(unittest.TestCase):
         self.assertEqual(b"Other part's contents", bar_content)
 
         os.unlink(filename)
+
+    def test_empty_file(self) -> None:
+        handle, filename = tempfile.mkstemp(suffix=".myx")
+
+        writer = pyecma376_2.ZipPackageWriter(filename)
+        writer.close()
+
+        with pyecma376_2.ZipPackageReader(filename) as reader:
+            self.assertEqual([], list(reader.list_parts()))
+            self.assertEqual([], list(reader.get_related_parts_by_type()))
+
+            core_properties = reader.get_core_properties()
+            self.assertIsNone(core_properties.created)
