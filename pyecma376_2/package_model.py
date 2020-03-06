@@ -647,7 +647,7 @@ def check_part_name(part_name: str) -> None:
     if not RE_PART_NAME.match(part_name):
         raise ValueError("{} is not an URI path with multiple segments (each not empty and not starting with '.') "
                          "or not starting with '/' or ending wit '/'".format(repr(part_name)))
-    if RE_PART_NAME_FORBIDDEN.match(part_name):
+    if RE_PART_NAME_FORBIDDEN.search(part_name):
         raise ValueError("{} contains URI encoded '/' or '\\'.".format(repr(part_name)))
 
 
