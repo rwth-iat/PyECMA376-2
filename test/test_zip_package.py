@@ -9,7 +9,7 @@
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
 # specific language governing permissions and limitations under the License.
 """ Tests for the main Reader/Writer functionality of the PyECMA376_2 package"""
-
+import datetime
 import os.path
 import tempfile
 import unittest
@@ -79,11 +79,21 @@ class TestZipWriter(unittest.TestCase):
             with writer.open_part("/example/document.txt", "text/plain") as part:
                 part.write("Lorem ipsum dolor sit amet.".encode())
 
+            # Write core properties (meta data)
+            # To make those work, we need to add the RELATIONSHIP_TYPE_CORE_PROPERTIES relationship below.
+            cp = pyecma376_2.OPCCoreProperties()
+            cp.created = datetime.datetime.now()
+            with writer.open_part(pyecma376_2.DEFAULT_CORE_PROPERTIES_NAME, "application/xml") as part:
+                cp.write_xml(part)
+
             # Write the packages root relationships
             writer.write_relationships([
                 pyecma376_2.OPCRelationship("r1", "http://example.com/my-package-relationship-id", "http://example.com",
                                             pyecma376_2.OPCTargetMode.EXTERNAL),
                 pyecma376_2.OPCRelationship("r2", "http://example.com/my-document-rel", "example/document.txt",
+                                            pyecma376_2.OPCTargetMode.INTERNAL),
+                pyecma376_2.OPCRelationship("r3", pyecma376_2.RELATIONSHIP_TYPE_CORE_PROPERTIES,
+                                            pyecma376_2.DEFAULT_CORE_PROPERTIES_NAME,
                                             pyecma376_2.OPCTargetMode.INTERNAL),
             ])
         os.unlink(filename)
