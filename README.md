@@ -82,7 +82,7 @@ with pyecma376_2.ZipPackageWriter("new_document.myx") as writer:
     # To make those work, we need to add the RELATIONSHIP_TYPE_CORE_PROPERTIES relationship below. 
     cp = pyecma376_2.OPCCoreProperties()
     cp.created = datetime.datetime.now()
-    with writer.open_part("/docProps/core.xml", "application/xml") as part:
+    with writer.open_part(pyecma376_2.DEFAULT_CORE_PROPERTIES_NAME, "application/xml") as part:
         cp.write_xml(part)
     
     # Write the packages root relationships
@@ -91,7 +91,8 @@ with pyecma376_2.ZipPackageWriter("new_document.myx") as writer:
                                     pyecma376_2.OPCTargetMode.EXTERNAL),
         pyecma376_2.OPCRelationship("r2", "http://example.com/my-document-rel", "example/document.txt",
                                     pyecma376_2.OPCTargetMode.INTERNAL),
-        pyecma376_2.OPCRelationship("r3", pyecma376_2.RELATIONSHIP_TYPE_CORE_PROPERTIES, "docProps/core.xml",
+        pyecma376_2.OPCRelationship("r3", pyecma376_2.RELATIONSHIP_TYPE_CORE_PROPERTIES,
+                                    pyecma376_2.DEFAULT_CORE_PROPERTIES_NAME,
                                     pyecma376_2.OPCTargetMode.INTERNAL),
     ])
     

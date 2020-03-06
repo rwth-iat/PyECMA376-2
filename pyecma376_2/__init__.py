@@ -13,3 +13,5 @@ from .package_model import OPCRelationship, OPCTargetMode, RELATIONSHIP_TYPE_COR
     RELATIONSHIP_TYPE_THUMBNAIL
 from .zip_package import ZipPackageReader, ZipPackageWriter
 from .core_properties import OPCCoreProperties
+
+DEFAULT_CORE_PROPERTIES_NAME = "/docProps/core.xml"
