@@ -52,6 +52,7 @@ class TestZipReader(unittest.TestCase):
 class TestZipWriter(unittest.TestCase):
     def test_rewrite_docx(self) -> None:
         handle, new_filename = tempfile.mkstemp(suffix=".docx")
+        os.close(handle)
         file_name = os.path.join(os.path.dirname(__file__), "empty_document.docx")
         reader = pyecma376_2.ZipPackageReader(file_name)
         writer = pyecma376_2.ZipPackageWriter(new_filename)
@@ -77,6 +78,7 @@ class TestZipWriter(unittest.TestCase):
 
     def test_write_example(self) -> None:
         handle, filename = tempfile.mkstemp(suffix=".myx")
+        os.close(handle)
         with pyecma376_2.ZipPackageWriter(filename) as writer:
             # Add a part
             with writer.open_part("/example/document.txt", "text/plain") as part:
@@ -104,6 +106,7 @@ class TestZipWriter(unittest.TestCase):
     def test_write_fragmented(self) -> None:
         """ Test the writing of interleaved parts. Also test premature writing of ContentTypes (using defaults)"""
         handle, filename = tempfile.mkstemp(suffix=".myx")
+        os.close(handle)
 
         with pyecma376_2.ZipPackageWriter(filename) as writer:
             writer.content_types.default_types['txt'] = "text/plain"
@@ -129,6 +132,7 @@ class TestZipWriter(unittest.TestCase):
 
     def test_empty_file(self) -> None:
         handle, filename = tempfile.mkstemp(suffix=".myx")
+        os.close(handle)
 
         writer = pyecma376_2.ZipPackageWriter(filename)
         writer.close()
