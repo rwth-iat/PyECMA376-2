@@ -24,6 +24,8 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=["pyecma376_2"],
+    zip_safe=False,
+    package_data={"pyecma376_2": ["py.typed"]},
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",
