@@ -16,7 +16,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="pyecma376-2",
-    version="0.2.3",
+    version="0.2.4",
     author="Michael Thies",
     author_email="m.thies@plt.rwth-aachen.de",
     url="https://git.rwth-aachen.de/acplt/pyecma376-2",
