@@ -132,7 +132,7 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
         """
         return self._parts[normalize_part_name(part_name)].content_type
 
-    def open_part(self, name: str) -> IO[bytes]:
+    def open_part(self, name: str) -> BinaryIO:
         """
         Open a Part of the package by its part name.
 
@@ -254,7 +254,7 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def open_item(self, name: str) -> IO[bytes]:
+    def open_item(self, name: str) -> BinaryIO:
         """
         Internal method to open an item of the underlying physical package by logical item name.
 
@@ -345,7 +345,7 @@ class OPCPackageWriter(metaclass=abc.ABCMeta):
             self.content_types = ContentTypesData()
             self.content_types_written = False
 
-    def open_part(self, name: str, content_type: str) -> IO[bytes]:
+    def open_part(self, name: str, content_type: str) -> BinaryIO:
         """
         Create a new Part with the given part name and open it as file-like object for writing.
 
@@ -477,7 +477,7 @@ class OPCPackageWriter(metaclass=abc.ABCMeta):
         self.content_types_written = True
 
     @abc.abstractmethod
-    def create_item(self, name: str, content_type: str) -> IO[bytes]:
+    def create_item(self, name: str, content_type: str) -> BinaryIO:
         """
         Internal method to create and open an item of the underlying physical package by logical item name.
 
@@ -519,7 +519,7 @@ class FragmentedPartWriterHandle:
         self.fragment_number: int = 0
         self.finished = False
 
-    def open(self, last: bool = False) -> IO[bytes]:
+    def open(self, last: bool = False) -> BinaryIO:
         """
         Open a new fragement/item of the fragmented Part described by this handle for writing.
 

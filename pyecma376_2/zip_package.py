@@ -18,7 +18,7 @@ main package.
 """
 import os
 import zipfile
-from typing import Iterable, IO, Union
+from typing import Iterable, IO, Union, BinaryIO
 
 from . import package_model
 
@@ -37,8 +37,8 @@ class ZipPackageReader(package_model.OPCPackageReader, zipfile.ZipFile):
         return ["/" + name for name in self.namelist()
                 if name[-1] != '/']
 
-    def open_item(self, name: str) -> IO[bytes]:
-        return self.open(name[1:])
+    def open_item(self, name: str) -> BinaryIO:
+        return self.open(name[1:])  # type: ignore  # This seems to be an issue of typeshed.
 
     def close(self) -> None:
         zipfile.ZipFile.close(self)
@@ -55,5 +55,5 @@ class ZipPackageWriter(package_model.OPCPackageWriter, zipfile.ZipFile):
         package_model.OPCPackageWriter.close(self)
         zipfile.ZipFile.close(self)
 
-    def create_item(self, name: str, content_type: str) -> IO[bytes]:
-        return self.open(name[1:], mode='w')
+    def create_item(self, name: str, content_type: str) -> BinaryIO:
+        return self.open(name[1:], mode='w')  # type: ignore  # This seems to be an issue of typeshed.
