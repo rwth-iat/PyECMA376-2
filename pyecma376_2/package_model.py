@@ -498,11 +498,14 @@ class OPCPackageWriter(metaclass=abc.ABCMeta):
             with xf.element(RELATIONSHIPS_XML_NAMESPACE + "Relationships",
                             nsmap={None: RELATIONSHIPS_XML_NAMESPACE[1:-1]}):
                 for relationship in relationships:
-                    xf.write(etree.Element(RELATIONSHIPS_XML_NAMESPACE + 'Relationship', {
-                        'Target': relationship.target,
-                        'Id': relationship.id,
-                        'Type': relationship.type,
-                        'TargetMode': relationship.target_mode.serialize()}))
+                    with xf.element(RELATIONSHIPS_XML_NAMESPACE + 'Relationship', {
+                            'Target': relationship.target,
+                            'Id': relationship.id,
+                            'Type': relationship.type,
+                            'TargetMode': relationship.target_mode.serialize()}):
+                        # This is a bit strange, but the only way to use lxml's incremental XML serialization, which is
+                        # required here, to achieve a consistent Namespace handling with the parent elements
+                        pass
 
 
 class FragmentedPartWriterHandle:
@@ -616,11 +619,16 @@ class ContentTypesData:
             with xf.element(self.XML_NAMESPACE + "Types",
                             nsmap={None: self.XML_NAMESPACE[1:-1]}):
                 for extension, content_type in self.default_types.items():
-                    xf.write(etree.Element(self.XML_NAMESPACE + 'Default',
-                                           {'Extension': extension, 'ContentType': content_type}))
+                    with xf.element(self.XML_NAMESPACE + 'Default',
+                                    {'Extension': extension, 'ContentType': content_type}):
+                        # This is a bit strange, but the only way to use lxml's incremental XML serialization, which is
+                        # required here, to achieve a consistent Namespace handling with the parent elements
+                        pass
                 for part_name, content_type in self.overrides.items():
-                    xf.write(etree.Element(self.XML_NAMESPACE + 'Override',
-                                           {'PartName': part_name, 'ContentType': content_type}))
+                    with xf.element(self.XML_NAMESPACE + 'Override',
+                                    {'PartName': part_name, 'ContentType': content_type}):
+                        # ... same here
+                        pass
 
 
 def _rels_part_for(part_name: str) -> str:
