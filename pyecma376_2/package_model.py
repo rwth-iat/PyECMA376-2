@@ -495,6 +495,7 @@ class OPCPackageWriter(metaclass=abc.ABCMeta):
     def _write_relationships(rels_part: IO[bytes], relationships: Iterable["OPCRelationship"]) -> None:
         """ Internal helper function to serialize and write a list of Relationships into an XML Relationships part """
         with etree.xmlfile(rels_part, encoding="UTF-8") as xf:
+            xf.write_declaration()
             with xf.element(RELATIONSHIPS_XML_NAMESPACE + "Relationships",
                             nsmap={None: RELATIONSHIPS_XML_NAMESPACE[1:-1]}):
                 for relationship in relationships:
@@ -616,6 +617,7 @@ class ContentTypesData:
 
     def write_xml(self, file: IO[bytes]) -> None:
         with etree.xmlfile(file, encoding="UTF-8") as xf:
+            xf.write_declaration()
             with xf.element(self.XML_NAMESPACE + "Types",
                             nsmap={None: self.XML_NAMESPACE[1:-1]}):
                 for extension, content_type in self.default_types.items():
