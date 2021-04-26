@@ -195,6 +195,7 @@ class OPCCoreProperties:
         Serialize and write these Core Properties into an XML file or package Part, according to the ECMA standard.
         """
         with etree.xmlfile(file, encoding="UTF-8") as xf:
+            xf.write_declaration()
             with xf.element(XML_NAMESPACE + "coreProperties", nsmap=self.NSMAP):
                 for attr, tag, extractor, serializer in self.ATTRIBUTES:
                     value = getattr(self, attr)
