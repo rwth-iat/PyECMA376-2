@@ -113,7 +113,7 @@ Auxiliary classes and functions like `OPCRelationship`, `part_realpath` and `nor
 
 ## License
 
-This package is developed by Michael Thies at the Chair of Process Control Engineering (PLT) at RWTH Aachen University.
+This package has been developed by Michael Thies at the Chair of Information and Automation Systems for Process and Material Technology (PLT) at RWTH Aachen University.
 
 It is published under the terms of Apache License v2.
 See LICENSE and NOTICE files for details.
