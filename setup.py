@@ -17,7 +17,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 setuptools.setup(
     name="pyecma376-2",
     version="0.2.7",
-    author="Lehrstuhl für Informations- und Automatisierungssysteme, RWTH Aachen",
+    author="Chair of Information and Automation Systems for Process and Material Technology, RWTH Aachen University",
     author_email="contact@plt.rwth-aachen.de",
     url="https://github.com/acplt/PyECMA376-2",
     project_urls={
