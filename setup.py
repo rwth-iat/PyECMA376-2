@@ -17,9 +17,13 @@ with open("README.md", "r", encoding="utf-8") as fh:
 setuptools.setup(
     name="pyecma376-2",
     version="0.2.7",
-    author="Michael Thies",
-    author_email="m.thies@plt.rwth-aachen.de",
-    url="https://git.rwth-aachen.de/acplt/pyecma376-2",
+    author="Lehrstuhl für Informations- und Automatisierungssysteme, RWTH Aachen",
+    author_email="contact@plt.rwth-aachen.de",
+    url="https://github.com/acplt/PyECMA376-2",
+    project_urls={
+        'Source': 'https://github.com/acplt/PyECMA376-2',
+        'Tracker': 'https://github.com/acplt/PyECMA376-2/issues',
+    },
     description="Library for reading and writing ECMA 376-2 (Open Packaging Conventions) files",
     long_description=long_description,
     long_description_content_type="text/markdown",
