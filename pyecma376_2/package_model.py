@@ -645,7 +645,7 @@ def normalize_part_name(part_name: str) -> str:
     return part_name.lower()
 
 
-RE_PART_NAME = re.compile(r'^(/[A-Za-z0-9\-\._~%:@!$&\'()*+,;=]*[A-Za-z0-9\-_~%:@!$&\'()*+,;=])+$')
+RE_PART_NAME = re.compile(r'^(/[A-Za-z0-9\-\._~%:@!$&\'()*+,;= ]*[A-Za-z0-9\-_~%:@!$&\'()*+,;= ])+$')
 RE_PART_NAME_FORBIDDEN = re.compile(r'%5c|%2f', re.IGNORECASE)
 
 
