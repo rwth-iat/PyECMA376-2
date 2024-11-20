@@ -149,7 +149,7 @@ class OPCPackageReader(metaclass=abc.ABCMeta):
         try:
             part_descriptor = self._parts[normalize_part_name(name)]
         except KeyError as e:
-            raise KeyError("Could not find part {} in package".format(name)) from e
+            raise KeyError(f"Could not find part {name} in package") from e
         if part_descriptor.fragmented:
             return FragmentedPartReader(part_descriptor.physical_item_name, self)  # type: ignore
         else:
@@ -287,18 +287,15 @@ class FragmentedPartReader(io.RawIOBase):
 
     def _open_next_item(self) -> None:
         try:
-            self. _current_item_handle = self._reader.open_item("{}/[{}].piece"
-                                                                .format(self._name, self._fragment_number))
+            self. _current_item_handle = self._reader.open_item(f"{self._name}/[{self._fragment_number}].piece")
             self._fragment_number += 1
         except KeyError:
             self._finished = True
             try:
-                self._current_item_handle = self._reader.open_item("{}/[{}].last.piece"
-                                                                   .format(self._name, self._fragment_number))
+                self._current_item_handle = self._reader.open_item(f"{self._name}/[{self._fragment_number}].last.piece")
                 self._fragment_number += 1
             except KeyError as e:
-                raise KeyError("Fragment {} of part {} is missing in package"
-                               .format(self._fragment_number, self._name)) from e
+                raise KeyError(f"Fragment {self._fragment_number} of part {self._name} is missing in package") from e
 
     def seekable(self) -> bool:
         return False
@@ -367,8 +364,8 @@ class OPCPackageWriter(metaclass=abc.ABCMeta):
         if self.content_types_stream_name is not None:
             if self.content_types.get_content_type(name) != content_type:
                 if self.content_types_written:
-                    raise RuntimeError("Content Type of part {} is not set correctly but ContentTypeStream has been "
-                                       "written already.".format(name))
+                    raise RuntimeError(f"Content Type of part {name} is not set correctly "
+                                       f"but ContentTypeStream has been written already.")
                 else:
                     self.content_types.overrides[name] = content_type
         return self.create_item(name, content_type)
@@ -423,8 +420,8 @@ class OPCPackageWriter(metaclass=abc.ABCMeta):
         if self.content_types_stream_name is not None:
             if self.content_types.get_content_type(name) != content_type:
                 if self.content_types_written:
-                    raise RuntimeError("Content Type of part {} is not set correctly but ContentTypeStream has been "
-                                       "written already.".format(name))
+                    raise RuntimeError(f"Content Type of part {name} is not set correctly "
+                                       f"but ContentTypeStream has been written already.")
                 else:
                     self.content_types.overrides[name] = content_type
         return FragmentedPartWriterHandle(name, content_type, self)
@@ -537,8 +534,8 @@ class FragmentedPartWriterHandle:
         :raises RuntimeError: when trying to open another fragment after the `last` fragment.
         """
         if self.finished:
-            raise RuntimeError("Fragmented Part {} has already been finished".format(self.name))
-        f = self.writer.create_item("{}/[{}]{}.piece".format(self.name, self.fragment_number, ".last" if last else ""),
+            raise RuntimeError(f"Fragmented Part {self.name} has already been finished")
+        f = self.writer.create_item(f'{self.name}/[{self.fragment_number}]{".last" if last else ""}.piece',
                                     self.content_type)
         self.fragment_number += 1
         self.finished = last
@@ -655,10 +652,11 @@ def check_part_name(part_name: str) -> None:
     :raises ValueError: if it is not.
     """
     if not RE_PART_NAME.match(part_name):
-        raise ValueError("{} is not an URI path with multiple segments (each not empty and not starting with '.') "
-                         "or not starting with '/' or ending wit '/'".format(repr(part_name)))
+        raise ValueError(f"{repr(part_name)} is not an URI path with multiple segments "
+                         f"(each not empty and not starting with '.') "
+                         "or not starting with '/' or ending with '/'")
     if RE_PART_NAME_FORBIDDEN.search(part_name):
-        raise ValueError("{} contains URI encoded '/' or '\\'.".format(repr(part_name)))
+        raise ValueError(f"{repr(part_name)} contains URI encoded '/' or '\\'.")
 
 
 def part_realpath(part_name: str, source_part_name: str) -> str:
